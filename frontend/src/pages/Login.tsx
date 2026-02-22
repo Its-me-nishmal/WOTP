@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { GoogleLogin } from '@react-oauth/google';
+import { ArrowLeft } from 'lucide-react';
 
 export default function Login() {
     const { login, googleLogin, user, loading } = useAuth();
@@ -17,6 +18,9 @@ export default function Login() {
 
     return (
         <div className="auth-page">
+            <Link to="/" className="absolute top-8 left-8 flex items-center gap-2 text-secondary hover:text-primary transition-colors no-underline text-sm font-medium">
+                <ArrowLeft size={16} /> Back to Home
+            </Link>
             <div className="auth-card">
                 <div className="auth-logo">
                     <div className="logo-mark" style={{ width: 48, height: 48, fontSize: 24 }}>W</div>

@@ -30,7 +30,7 @@ export default function Landing() {
             <header className="hero">
                 <div className="hero-badge">
                     <Zap size={14} fill="currentColor" />
-                    <span>New: WhatsApp Business API Support added</span>
+                    <span>Reliable & Independent OTP Service</span>
                 </div>
                 <h1 className="hero-title">
                     The Fastest Way to Send <br />

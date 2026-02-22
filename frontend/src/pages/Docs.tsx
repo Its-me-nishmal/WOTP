@@ -120,23 +120,43 @@ function GettingStarted() {
     );
 }
 
+const BASE_URL = 'https://wotp.onrender.com/api';
+
 function ApiReference() {
+    const { user } = useAuth();
+    const [apiKey, setApiKey] = useState('YOUR_API_KEY');
+
+    useEffect(() => {
+        if (user) {
+            import('../services/api').then(m => m.apiKeysApi.list()).then(keys => {
+                if (keys && keys.length > 0) {
+                    setApiKey(keys[0].key || keys[0].prefix);
+                }
+            }).catch(console.error);
+        }
+    }, [user]);
+
     return (
         <section className="animate-in">
             <h1 className="docs-h1">API Reference</h1>
             <p className="docs-p">
                 Integrate WOTP into your application using our simple REST API.
-                All requests must be made over HTTPS.
+                All requests must be made over HTTPS to:
+                <code className="ml-2 px-2 py-1 bg-surface border rounded text-accent">{BASE_URL}</code>
             </p>
 
             <h2 className="docs-h2">Authentication</h2>
             <p className="docs-p">Include your API key in the Authorization header:</p>
-            <div className="code-block">
-                Authorization: Bearer YOUR_API_KEY
+            <div className="docs-code-container">
+                <div className="code-block">
+                    Authorization: Bearer {apiKey}
+                </div>
             </div>
 
             <h2 className="docs-h2">Endpoint: Send OTP</h2>
-            <p className="docs-badge">POST /api/otp/send</p>
+            <p className="docs-badge">POST /otp/send</p>
+
+            <h3 className="docs-h3">Parameters</h3>
             <div className="table-wrap" style={{ margin: '16px 0' }}>
                 <table>
                     <thead>
@@ -176,61 +196,88 @@ function ApiReference() {
                 </table>
             </div>
 
-            <h3 className="docs-h3">Example Request</h3>
-            <div className="code-block">
-                {`curl -X POST https://api.wotp.com/api/otp/send \\
-  -H "Authorization: Bearer wk_..." \\
+            <h3 className="docs-h3">Implementation Examples</h3>
+            <CodeSnippet
+                curl={`curl -X POST ${BASE_URL}/otp/send \\
+  -H "Authorization: Bearer ${apiKey}" \\
   -H "Content-Type: application/json" \\
   -d '{
     "phone": "919876543210",
-    "length": 8,
-    "type": "alphanumeric",
-    "message": "Your secure login code is {{otp}}"
+    "length": 6,
+    "message": "Your Login code is {{otp}}"
   }'`}
-            </div>
+                node={`const axios = require('axios');
 
-            <h3 className="docs-h3">Success Response</h3>
-            <div className="code-block">
-                {`{
-  "success": true,
-  "message": "OTP sent",
-  "phone": "919876543210"
-}`}
-            </div>
+const sendOtp = async () => {
+  try {
+    const response = await axios.post('${BASE_URL}/otp/send', {
+      phone: '919876543210',
+      length: 6,
+      message: 'Your Login code is {{otp}}'
+    }, {
+      headers: { 'Authorization': 'Bearer ${apiKey}' }
+    });
+    console.log(response.data);
+  } catch (err) {
+    console.error(err.response.data);
+  }
+};`}
+                fetch={`fetch('${BASE_URL}/otp/send', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer ${apiKey}',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    phone: '919876543210',
+    length: 6
+  })
+})
+.then(res => res.json())
+.then(console.log);`}
+            />
 
             <h2 className="docs-h2">Endpoint: Verify OTP</h2>
-            <p className="docs-badge">POST /api/otp/verify</p>
-            <div className="table-wrap" style={{ margin: '16px 0' }}>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Parameter</th>
-                            <th>Type</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code className="text-accent">phone</code></td>
-                            <td>string</td>
-                            <td>Phone number used for sending OTP</td>
-                        </tr>
-                        <tr>
-                            <td><code className="text-accent">otp</code></td>
-                            <td>string</td>
-                            <td>The OTP provided by the user</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            <p className="docs-badge">POST /otp/verify</p>
 
-            <h3 className="docs-h3">Success Response</h3>
-            <div className="code-block">
-                {`{
-  "success": true,
-  "message": "OTP verified successfully"
-}`}
-            </div>
+            <h3 className="docs-h3">Implementation Examples</h3>
+            <CodeSnippet
+                curl={`curl -X POST ${BASE_URL}/otp/verify \\
+  -H "Authorization: Bearer ${apiKey}" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "phone": "919876543210",
+    "otp": "123456"
+  }'`}
+                node={`const axios = require('axios');
+
+const verifyOtp = async () => {
+  try {
+    const response = await axios.post('${BASE_URL}/otp/verify', {
+      phone: '919876543210',
+      otp: '123456'
+    }, {
+      headers: { 'Authorization': 'Bearer ${apiKey}' }
+    });
+    console.log(response.data);
+  } catch (err) {
+    console.error(err.response.data);
+  }
+};`}
+                fetch={`fetch('${BASE_URL}/otp/verify', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer ${apiKey}',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    phone: '919876543210',
+    otp: '123456'
+  })
+})
+.then(res => res.json())
+.then(console.log);`}
+            />
 
             <h2 className="docs-h2">Status Codes</h2>
             <div className="table-wrap" style={{ margin: '16px 0' }}>
@@ -277,6 +324,37 @@ function ApiReference() {
                 </table>
             </div>
         </section>
+    );
+}
+
+function CodeSnippet({ curl, node, fetch }: { curl: string, node: string, fetch: string }) {
+    const [tab, setTab] = useState<'curl' | 'node' | 'fetch'>('curl');
+    const [copied, setCopied] = useState(false);
+
+    const code = tab === 'curl' ? curl : tab === 'node' ? node : fetch;
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(code);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <div className="docs-code-container">
+            <div className="docs-code-tabs">
+                <button className={`docs-code-tab ${tab === 'curl' ? 'active' : ''}`} onClick={() => setTab('curl')}>cURL</button>
+                <button className={`docs-code-tab ${tab === 'node' ? 'active' : ''}`} onClick={() => setTab('node')}>Node.js</button>
+                <button className={`docs-code-tab ${tab === 'fetch' ? 'active' : ''}`} onClick={() => setTab('fetch')}>Fetch</button>
+
+                <button className={`docs-copy-btn ${copied ? 'copied' : ''}`} onClick={handleCopy}>
+                    {copied ? <CheckCircle size={12} /> : <Terminal size={12} />}
+                    {copied ? 'Copied!' : 'Copy'}
+                </button>
+            </div>
+            <pre className="code-block" style={{ whiteSpace: 'pre-wrap' }}>
+                {code}
+            </pre>
+        </div>
     );
 }
 
