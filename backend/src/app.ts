@@ -19,9 +19,14 @@ export const createApp = () => {
 
 
     // ── Security Middleware ─────────────────────────────────────────────────────
-    app.use(helmet());
+    app.use(helmet({
+        crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+    }));
     app.use(cors({
-        origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+        origin: [
+            process.env.FRONTEND_URL || 'http://localhost:5173',
+            'https://wotp.vercel.app'
+        ],
         credentials: true,
     }));
 
