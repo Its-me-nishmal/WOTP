@@ -20,15 +20,15 @@ export const createApiKey = async (req: AuthRequest, res: Response): Promise<voi
             userId,
             name,
             key: hashedKey,
+            rawKey,
             prefix,
             isActive: true,
         });
 
         logger.info('API key created', { userId, name, prefix });
 
-        // Return rawKey ONCE — never stored in plain text
         res.status(201).json({
-            message: 'API key created. Store it safely — it will not be shown again.',
+            message: 'API key created successfully.',
             apiKey: rawKey,
             ...newKey.toObject(),
         });
@@ -43,7 +43,8 @@ export const createApiKey = async (req: AuthRequest, res: Response): Promise<voi
 };
 
 export const listApiKeys = async (req: AuthRequest, res: Response): Promise<void> => {
-    const keys = await ApiKey.find({ userId: req.user!._id }).select('-key').lean();
+    // Return all keys including rawKey for owner visibility
+    const keys = await ApiKey.find({ userId: req.user!._id }).lean();
     res.json({ keys });
 };
 

@@ -87,7 +87,7 @@ export default function ApiKeys() {
                                         <td style={{ width: 220 }}>
                                             <CopyField
                                                 value={key.key || key.prefix}
-                                                masked={!key.key}
+                                                masked={false}
                                             />
                                         </td>
                                         <td>{new Date(key.createdAt).toLocaleDateString()}</td>

@@ -24,10 +24,10 @@ export const dashboardApi = {
 };
 
 export const apiKeysApi = {
-    list: () => unwrap(api.get<{ keys: (ApiKey & { _id: string })[] }>('/apikey/list'))
-        .then(data => data.keys.map(k => ({ ...k, id: k._id }))), // map _id -> id
-    create: (name: string) => unwrap(api.post<ApiKey & { apiKey: string }>('/apikey/create', { name }))
-        .then(k => ({ ...k, id: k._id, key: k.apiKey })), // map _id -> id, apiKey -> key
+    list: () => unwrap(api.get<{ keys: (ApiKey & { _id: string; rawKey: string })[] }>('/apikey/list'))
+        .then(data => data.keys.map(k => ({ ...k, id: k._id, key: k.rawKey }))), // map _id -> id, rawKey -> key
+    create: (name: string) => unwrap(api.post<ApiKey & { apiKey: string; rawKey: string }>('/apikey/create', { name }))
+        .then(k => ({ ...k, id: k._id, key: k.rawKey || k.apiKey })), // map _id -> id, rawKey/apiKey -> key
     revoke: (id: string) => unwrap(api.delete(`/apikey/${id}`)),
 };
 
