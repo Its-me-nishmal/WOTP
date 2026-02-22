@@ -38,12 +38,16 @@ export const createApp = () => {
     app.use(express.json({ limit: '10kb' }));
     app.use(express.urlencoded({ extended: false }));
 
+    // ── Root Path ───────────────────────────────────────────────────────────────
+    app.get('/', (_req, res) => {
+        res.json({ success: true, message: 'WOTP API is running' });
+    });
+
     // ── Health Check ────────────────────────────────────────────────────────────
     app.get('/health', (_req, res) => {
         res.json({ status: 'ok', timestamp: new Date().toISOString() });
     });
 
-    // ── Routes ──────────────────────────────────────────────────────────────────
     // ── Routes ──────────────────────────────────────────────────────────────────
     const apiRouter = express.Router();
     apiRouter.use('/auth', authRoutes);
