@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { Send, Smartphone, History, Loader2, RefreshCw } from 'lucide-react';
 import AppLayout from '../components/layout/AppLayout';
 import { useAuth } from '../context/AuthContext';
-import { messagingApi, messageLogsApi, apiKeysApi } from '../services/api';
+import { messagingApi, messageLogsApi, apiKeysApi, whatsappApi } from '../services/api';
 import { useToast } from '../hooks/useToast';
-import type { ApiKey } from '../types';
+import type { ApiKey, WhatsAppNumber } from '../types';
 import PremiumUpgradeModal from '../components/modals/PremiumUpgradeModal';
 
 export default function Messaging() {
@@ -167,7 +167,68 @@ export default function Messaging() {
                                     {sending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
                                     {connections.length === 0 ? 'Connect WhatsApp First' : 'Send WhatsApp Message'}
                                 </button>
-                            </AppLayout>
-                            );
-}
+                            </form>
+                        </div>
+                    </div>
+                </div>
 
+                {/* History Section */}
+                <div className="flex flex-col h-full overflow-hidden">
+                    <div className="card h-full flex flex-col overflow-hidden">
+                        <div className="card-header border-b border-white/5 flex justify-between items-center py-4">
+                            <h3 className="flex items-center gap-2 font-semibold">
+                                <History size={18} className="text-accent" />
+                                Recent Messages
+                            </h3>
+                            <button className="p-2 hover:bg-white/5 rounded-lg transition-colors text-secondary" onClick={fetchLogs}>
+                                <RefreshCw size={14} className={loadingLogs ? 'animate-spin' : ''} />
+                            </button>
+                        </div>
+                        <div className="card-body p-0 flex-1 overflow-auto">
+                            {loadingLogs && logs.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-64 text-secondary">
+                                    <Loader2 className="animate-spin mb-3 opacity-50" size={24} />
+                                    <span className="text-xs">Loading history...</span>
+                                </div>
+                            ) : logs.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-64 text-secondary opacity-30">
+                                    <History size={40} className="mb-4" />
+                                    <span className="text-sm">No records found</span>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-white/5">
+                                    {logs.map(log => (
+                                        <div key={log._id} className="p-4 hover:bg-white/[0.02] transition-colors group">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className="font-mono text-xs font-semibold text-primary">{log.phone}</span>
+                                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${log.status === 'delivered' ? 'bg-green-500/10 text-green-500' :
+                                                        log.status === 'failed' ? 'bg-red-500/10 text-red-500' :
+                                                            'bg-orange-500/10 text-orange-500'
+                                                    }`}>
+                                                    {log.status.toUpperCase()}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-secondary line-clamp-2 pr-4">{log.content}</p>
+                                            <div className="flex justify-between items-center mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <span className="text-[10px] text-secondary/60">
+                                                    {new Date(log.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                                </span>
+                                                <span className="text-[10px] text-accent/60 font-medium">via {log.apiKeyId?.name || 'API'}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <PremiumUpgradeModal
+                isOpen={upgradeModalOpen}
+                onClose={() => setUpgradeModalOpen(false)}
+                featureName="Multi-Client Sending"
+            />
+        </AppLayout>
+    );
+}
