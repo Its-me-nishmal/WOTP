@@ -12,9 +12,12 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
         name: user.name,
         avatar: user.avatar,
         plan: user.plan,
-        usageCount: user.usageCount,
+        usageCount: user.usageCount, // OTP Monthly
         usageLimit: user.plan === 'pro' ? 10000 : 100,
         usageResetAt: user.usageResetAt,
+        dailyOtpCount: user.dailyOtpCount || 0,
+        dailyMessageCount: user.dailyMessageCount || 0,
+        messageUsageCount: user.messageUsageCount || 0,
         whatsappStatus: user.whatsappStatus,
         createdAt: user.createdAt,
     });
@@ -100,21 +103,27 @@ export const getLogs = async (req: AuthRequest, res: Response): Promise<void> =>
 export const getStats = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const userId = req.user!._id;
-        const [totalSent, totalVerified, activeKeys] = await Promise.all([
+        const [totalSent, totalVerified, totalMessages, activeKeys] = await Promise.all([
             OtpLog.countDocuments({ userId, status: 'delivered' }),
             OtpLog.countDocuments({ userId, status: 'verified' }),
+            require('../models/MessageLog').MessageLog.countDocuments({ userId }),
             ApiKey.countDocuments({ userId, isActive: true })
         ]);
 
         const planLimit = req.user!.plan === 'pro' ? 10000 : 100;
         const remainingOtps = Math.max(0, planLimit - req.user!.usageCount);
+        const msgLimit = req.user!.plan === 'pro' ? 50000 : 250;
+        const remainingMessages = Math.max(0, msgLimit - (req.user!.messageUsageCount || 0));
 
         res.json({
             totalSent,
             totalVerified,
+            totalMessages,
             activeKeys,
             remainingOtps,
-            planLimit
+            remainingMessages,
+            planLimit,
+            msgLimit
         });
     } catch (err) {
         logger.error('Get stats error', { err });

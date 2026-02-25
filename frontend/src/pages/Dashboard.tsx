@@ -125,23 +125,23 @@ export default function Dashboard() {
             {/* Stats Grid */}
             <div className="stat-grid">
                 <div className="stat-card">
-                    <div className="stat-icon green"><Activity size={20} /></div>
-                    <div className="stat-label">Total Sent</div>
+                    <div className="stat-icon purple"><Activity size={20} /></div>
+                    <div className="stat-label">OTPs Sent</div>
                     <div className="stat-value">{stats?.totalSent ?? 0}</div>
                 </div>
                 <div className="stat-card">
-                    <div className="stat-icon purple"><CheckCircle size={20} /></div>
+                    <div className="stat-icon green"><Send size={20} /></div>
+                    <div className="stat-label">Messages Sent</div>
+                    <div className="stat-value">{stats?.totalMessages ?? 0}</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-icon green"><CheckCircle size={20} /></div>
                     <div className="stat-label">Verified</div>
                     <div className="stat-value">{stats?.totalVerified ?? 0}</div>
                 </div>
                 <div className="stat-card">
                     <div className="stat-icon orange"><AlertTriangle size={20} /></div>
-                    <div className="stat-label">Remaining</div>
-                    <div className="stat-value">{stats?.remainingOtps ?? 0}</div>
-                </div>
-                <div className="stat-card">
-                    <div className="stat-icon green"><Smartphone size={20} /></div>
-                    <div className="stat-label">Active Keys</div>
+                    <div className="stat-label">Inactive Keys</div>
                     <div className="stat-value">{stats?.activeKeys ?? 0}</div>
                 </div>
             </div>

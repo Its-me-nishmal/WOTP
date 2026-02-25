@@ -47,7 +47,10 @@ export interface LogEntry {
 export interface DashboardStats {
     totalSent: number;
     totalVerified: number;
+    totalMessages?: number;
     activeKeys: number;
     remainingOtps: number;
+    remainingMessages?: number;
     planLimit: number;
+    msgLimit?: number;
 }
