@@ -6,6 +6,7 @@ import { connectRedis } from './config/redis';
 import { startOtpWorker } from './jobs/otp.queue';
 import { startMessageWorker } from './jobs/message.queue';
 import { User } from './models/User';
+import { WhatsAppConnection } from './models/WhatsAppConnection';
 import { whatsappService } from './services/whatsapp.service';
 import { logger } from './utils/logger';
 
@@ -43,15 +44,18 @@ const bootstrap = async () => {
         startMessageWorker();
         logger.info('Workers started');
 
-        // 4. Restore active WhatsApp sessions
-        const activeUsers = await User.find({ whatsappStatus: { $in: ['connected', 'connecting'] } });
-        for (const user of activeUsers) {
-            whatsappService.connect(String(user._id));
+        // 5. Restore active WhatsApp sessions (multi-client support)
+        const activeConnections = await WhatsAppConnection.find({
+            status: { $in: ['connected', 'connecting'] }
+        });
+
+        for (const conn of activeConnections) {
+            whatsappService.connect(String(conn.userId), conn.sessionId);
         }
-        logger.info(`Restored ${activeUsers.length} WhatsApp sessions`);
+        logger.info(`Restored ${activeConnections.length} WhatsApp sessions`);
 
 
-        // 5. Start HTTP server
+        // 6. Start HTTP server
         const app = createApp();
         app.listen(PORT, () => {
             logger.info(`WOTP backend running on http://localhost:${PORT}`);
