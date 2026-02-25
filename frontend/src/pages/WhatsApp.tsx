@@ -226,7 +226,7 @@ export default function WhatsApp() {
                                 <div className="text-center space-y-1">
                                     <p className="text-sm font-medium">Scan QR Code</p>
                                     <p className="text-[11px] text-secondary max-w-[220px]">
-                                        Open WhatsApp > Linked Devices > Link a Device
+                                        Open WhatsApp &gt; Linked Devices &gt; Link a Device
                                     </p>
                                 </div>
                                 <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden mt-2">
