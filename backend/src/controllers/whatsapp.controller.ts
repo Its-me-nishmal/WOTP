@@ -1,25 +1,26 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { User } from '../models/User';
+import { WhatsAppConnection } from '../models/WhatsAppConnection';
 import { logger } from '../utils/logger';
 import { whatsappService } from '../services/whatsapp.service';
 
 export const connectWhatsApp = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const userId = String(req.user!._id);
+        const { sessionId = 'default' } = req.query;
 
         // Start session in the background
-        await whatsappService.connect(userId);
+        await whatsappService.connect(userId, sessionId as string);
 
         // Subscribe to QR updates for this user
-        const redis = req.app.get('redis'); // Assuming redis client is attached to app
+        const redis = req.app.get('redis');
         const sub = redis.duplicate();
         await sub.connect();
 
-        const channel = `whatsapp:qr:${userId}`;
+        const channel = `whatsapp:qr:${userId}:${sessionId}`;
         let qrReceived = false;
 
-        // Set a timeout to avoid hanging the request
         const timeout = setTimeout(async () => {
             if (!qrReceived) {
                 await sub.unsubscribe(channel);
@@ -55,9 +56,15 @@ export const connectWhatsApp = async (req: AuthRequest, res: Response): Promise<
 export const disconnectWhatsApp = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const userId = String(req.user!._id);
-        await whatsappService.disconnect(userId);
-        await User.findByIdAndUpdate(userId, { whatsappStatus: 'disconnected' });
-        res.json({ message: 'WhatsApp disconnected' });
+        const { sessionId = 'default' } = req.query;
+
+        await whatsappService.disconnect(userId, sessionId as string);
+
+        if (sessionId === 'default') {
+            await User.findByIdAndUpdate(userId, { whatsappStatus: 'disconnected' });
+        }
+
+        res.json({ message: `WhatsApp session ${sessionId} disconnected` });
     } catch (err) {
         logger.error('WhatsApp disconnect error', { err });
         res.status(500).json({ error: 'Failed to disconnect WhatsApp' });
@@ -65,7 +72,18 @@ export const disconnectWhatsApp = async (req: AuthRequest, res: Response): Promi
 };
 
 export const getWhatsAppStatus = async (req: AuthRequest, res: Response): Promise<void> => {
-    const user = req.user!;
-    const liveStatus = whatsappService.getStatus(String(user._id));
-    res.json({ status: liveStatus ?? user.whatsappStatus });
+    try {
+        const userId = req.user!._id;
+        const connections = await WhatsAppConnection.find({ userId }).lean();
+
+        // Enhance with live status if available
+        const enhanced = connections.map(conn => ({
+            ...conn,
+            status: whatsappService.getStatus(String(userId), conn.sessionId) || conn.status
+        }));
+
+        res.json({ connections: enhanced });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to get status' });
+    }
 };

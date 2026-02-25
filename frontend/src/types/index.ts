@@ -6,6 +6,10 @@ export interface User {
     plan: 'free' | 'pro';
     usageCount: number;
     usageLimit: number;
+    dailyOtpCount?: number;
+    dailyMessageCount?: number;
+    messageUsageCount?: number;
+    lastDailyResetAt?: string;
     whatsappStatus: 'disconnected' | 'connecting' | 'connected';
     createdAt: string;
 }
@@ -23,7 +27,10 @@ export interface ApiKey {
 
 export interface WhatsAppNumber {
     id: string;
-    number: string;
+    sessionId: string;
+    number?: string;
+    phone?: string;
+    name?: string;
     status: 'connected' | 'disconnected' | 'connecting';
     qrCode?: string;
 }

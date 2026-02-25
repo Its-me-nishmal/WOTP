@@ -9,6 +9,7 @@ import userRoutes from './routes/user.routes';
 import apikeyRoutes from './routes/apikey.routes';
 import otpRoutes from './routes/otp.routes';
 import whatsappRoutes from './routes/whatsapp.routes';
+import messageRoutes from './routes/message.routes';
 
 import { getRedis } from './config/redis';
 
@@ -60,6 +61,7 @@ export const createApp = () => {
     apiRouter.use('/apikey', apikeyRoutes);
     apiRouter.use('/otp', otpRoutes);
     apiRouter.use('/whatsapp', whatsappRoutes);
+    apiRouter.use('/message', messageRoutes);
 
     app.use('/api', apiRouter);
 

@@ -17,13 +17,14 @@ const KEY_MAP: Record<string, string> = {
 };
 
 export async function useMongoAuthState(
-    userId: string
+    userId: string,
+    sessionId: string = 'default'
 ): Promise<{ state: AuthenticationState; saveCreds: () => Promise<void> }> {
 
     const writeData = async (data: unknown, dataType: string, dataId: string = 'default') => {
         try {
             await Session.findOneAndUpdate(
-                { userId, dataType, dataId },
+                { userId, sessionId, dataType, dataId },
                 { data: JSON.parse(JSON.stringify(data, BufferJSON.replacer)) },
                 { upsert: true, returnDocument: 'after' }
             );
@@ -34,7 +35,7 @@ export async function useMongoAuthState(
 
     const readData = async <T>(dataType: string, dataId: string = 'default'): Promise<T | null> => {
         try {
-            const session = await Session.findOne({ userId, dataType, dataId }).lean();
+            const session = await Session.findOne({ userId, sessionId, dataType, dataId }).lean();
             if (!session) return null;
             return JSON.parse(JSON.stringify(session.data), BufferJSON.reviver) as T;
         } catch (err) {
@@ -45,7 +46,7 @@ export async function useMongoAuthState(
 
     const removeData = async (dataType: string, dataId: string) => {
         try {
-            await Session.deleteOne({ userId, dataType, dataId });
+            await Session.deleteOne({ userId, sessionId, dataType, dataId });
         } catch (err) {
             logger.error(`[AuthStore] Error removing data: ${dataType}`, err);
         }
@@ -94,7 +95,7 @@ export async function useMongoAuthState(
     };
 }
 
-export async function deleteSession(userId: string): Promise<void> {
-    logger.info(`Cleaning up WhatsApp session for user ${userId} in MongoDB`);
-    await Session.deleteMany({ userId });
+export async function deleteSession(userId: string, sessionId: string = 'default'): Promise<void> {
+    logger.info(`Cleaning up WhatsApp session for user ${userId} (session: ${sessionId}) in MongoDB`);
+    await Session.deleteMany({ userId, sessionId });
 }

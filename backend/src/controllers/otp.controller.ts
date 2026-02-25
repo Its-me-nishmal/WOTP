@@ -60,6 +60,8 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
             phone,
             user.plan,
             user.usageCount,
+            user.dailyOtpCount || 0,
+            user.lastDailyResetAt || new Date(),
             { length, type, expiresIn }
         );
 
@@ -84,6 +86,10 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
             return;
         }
         if (err instanceof Error && err.message.includes('quota')) {
+            res.status(429).json({ error: err.message });
+            return;
+        }
+        if (err instanceof Error && err.message.includes('limit')) {
             res.status(429).json({ error: err.message });
             return;
         }
@@ -167,6 +173,8 @@ export const sendTestOtp = async (req: AuthRequest, res: Response): Promise<void
             phone,
             user.plan,
             user.usageCount,
+            user.dailyOtpCount || 0,
+            user.lastDailyResetAt || new Date(),
             { length, type, expiresIn }
         );
 
@@ -183,6 +191,10 @@ export const sendTestOtp = async (req: AuthRequest, res: Response): Promise<void
     } catch (err) {
         if (err instanceof z.ZodError) {
             res.status(400).json({ error: err.errors });
+            return;
+        }
+        if (err instanceof Error && err.message.includes('limit')) {
+            res.status(429).json({ error: err.message });
             return;
         }
         logger.error('Send test OTP error', { err });
@@ -216,9 +228,3 @@ export const verifyTestOtp = async (req: AuthRequest, res: Response): Promise<vo
         res.status(500).json({ error: 'Failed to verify test OTP' });
     }
 };
-
-
-
-
-// End of OTP controllers
-

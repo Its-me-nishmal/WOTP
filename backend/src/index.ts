@@ -3,6 +3,7 @@ import { createApp } from './app';
 import { connectDB } from './config/db';
 import { connectRedis } from './config/redis';
 import { startOtpWorker } from './jobs/otp.queue';
+import { startMessageWorker } from './jobs/message.queue';
 import { User } from './models/User';
 import { whatsappService } from './services/whatsapp.service';
 import { logger } from './utils/logger';
@@ -18,9 +19,10 @@ const bootstrap = async () => {
         // 2. Connect to Redis
         await connectRedis();
 
-        // 3. Start BullMQ OTP worker
+        // 3. Start BullMQ OTP & Message workers
         startOtpWorker();
-        logger.info('OTP worker started');
+        startMessageWorker();
+        logger.info('Workers started');
 
         // 4. Restore active WhatsApp sessions
         const activeUsers = await User.find({ whatsappStatus: { $in: ['connected', 'connecting'] } });

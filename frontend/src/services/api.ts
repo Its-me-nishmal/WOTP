@@ -32,9 +32,9 @@ export const apiKeysApi = {
 };
 
 export const whatsappApi = {
-    connect: () => unwrap(api.post<{ qrCode?: string; message?: string }>('/whatsapp/connect')),
-    disconnect: () => unwrap(api.delete('/whatsapp/disconnect')),
-    getStatus: () => unwrap(api.get<{ status: WhatsAppNumber['status'] }>('/whatsapp/status')),
+    connect: (sessionId: string = 'default') => unwrap(api.post<{ qrCode?: string; message?: string }>('/whatsapp/connect', null, { params: { sessionId } })),
+    disconnect: (sessionId: string = 'default') => unwrap(api.delete('/whatsapp/disconnect', { params: { sessionId } })),
+    getStatus: () => unwrap(api.get<{ connections: WhatsAppNumber[] }>('/whatsapp/status')),
 };
 
 export const logsApi = {
@@ -86,4 +86,16 @@ export const otpApi = {
 
     verifyTest: (phone: string, otp: string) =>
         unwrap(api.post<{ success: boolean; message: string }>('/otp/test-verify', { phone, otp })),
+};
+export const messagingApi = {
+    send: (params: { phone: string; content: string; apiKey: string }) =>
+        unwrap(api.post('/message/send',
+            { phone: params.phone, content: params.content },
+            { headers: { Authorization: `Bearer ${params.apiKey}` } }
+        )),
+};
+
+export const messageLogsApi = {
+    list: (params?: { page?: number; limit?: number; phone?: string }) =>
+        unwrap(api.get<{ logs: any[]; total: number; page: number; limit: number; totalPages: number }>('/message/logs', { params })),
 };

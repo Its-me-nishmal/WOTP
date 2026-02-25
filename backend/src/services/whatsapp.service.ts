@@ -7,29 +7,27 @@ import { clientManager } from './whatsapp/ClientManager';
 import { logger } from '../utils/logger';
 
 class WhatsAppService {
-  async connect(userId: string): Promise<void> {
-    logger.info(`[WhatsApp] Starting session for user ${userId}`);
-    // Session start is async (fires QR via Redis Pub/Sub).
-    // Don't await — SSE endpoint subscribes simultaneously.
-    clientManager.startSession(userId).catch((err) =>
-      logger.error(`[WhatsApp] startSession error for ${userId}`, err)
+  async connect(userId: string, sessionId: string = 'default'): Promise<void> {
+    logger.info(`[WhatsApp] Starting session for user ${userId} (session: ${sessionId})`);
+    clientManager.startSession(userId, sessionId).catch((err) =>
+      logger.error(`[WhatsApp] startSession error for ${userId}:${sessionId}`, err)
     );
   }
 
-  async disconnect(userId: string): Promise<void> {
-    await clientManager.stopSession(userId);
+  async disconnect(userId: string, sessionId: string = 'default'): Promise<void> {
+    await clientManager.stopSession(userId, sessionId);
   }
 
-  getStatus(userId: string): 'connecting' | 'connected' | 'disconnected' | null {
-    return clientManager.getStatus(userId);
+  getStatus(userId: string, sessionId: string = 'default'): 'connecting' | 'connected' | 'disconnected' | null {
+    return clientManager.getStatus(userId, sessionId);
   }
 
-  async sendMessage(userId: string, phone: string, message: string): Promise<boolean> {
+  async sendMessage(userId: string, phone: string, message: string, sessionId: string = 'default'): Promise<boolean> {
     try {
-      await clientManager.sendMessage(userId, phone, message);
+      await clientManager.sendMessage(userId, phone, message, sessionId);
       return true;
     } catch (err) {
-      logger.error(`[WhatsApp] sendMessage failed for ${userId}`, err);
+      logger.error(`[WhatsApp] sendMessage failed for ${userId}:${sessionId}`, err);
       return false;
     }
   }

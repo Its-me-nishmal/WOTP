@@ -9,6 +9,7 @@ import Logs from './pages/Logs';
 import Settings from './pages/Settings';
 import Docs from './pages/Docs';
 import Playground from './pages/Playground';
+import Messaging from './pages/Messaging';
 
 import { ToastProvider } from './context/ToastContext';
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -50,6 +51,9 @@ export default function App() {
                             <Route path="/docs" element={<Docs />} />
                             <Route path="/playground" element={
                                 <ProtectedRoute><Playground /></ProtectedRoute>
+                            } />
+                            <Route path="/messaging" element={
+                                <ProtectedRoute><Messaging /></ProtectedRoute>
                             } />
                         </Routes>
                     </BrowserRouter>

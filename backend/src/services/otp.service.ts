@@ -19,15 +19,29 @@ export const generateAndStoreOtp = async (
     phone: string,
     plan: 'free' | 'pro',
     usageCount: number,
+    dailyOtpCount: number, // Added
+    lastDailyResetAt: Date, // Added
     options: {
         length?: number;
         type?: 'numeric' | 'alphanumeric' | 'alpha';
         expiresIn?: number;
     } = {}
 ): Promise<string> => {
-    const limit = plan === 'pro' ? 10000 : 100;
-    if (usageCount >= limit) {
-        throw new Error(`Monthly OTP quota exceeded (${limit} for ${plan} plan)`);
+    const now = new Date();
+    const isNewDay = lastDailyResetAt.toDateString() !== now.toDateString();
+
+    const currentDailyCount = isNewDay ? 0 : dailyOtpCount;
+    const currentUsageCount = usageCount; // Monthly
+
+    const monthlyLimit = plan === 'pro' ? 10000 : 100;
+    const dailyLimit = plan === 'pro' ? 500 : 20;
+
+    if (currentUsageCount >= monthlyLimit) {
+        throw new Error(`Monthly OTP quota exceeded (${monthlyLimit} for ${plan} plan)`);
+    }
+
+    if (currentDailyCount >= dailyLimit) {
+        throw new Error(`Daily OTP limit reached (${dailyLimit} for ${plan} plan)`);
     }
 
     const { length = 6, type = 'numeric', expiresIn = DEFAULT_OTP_TTL } = options;
@@ -53,8 +67,17 @@ export const generateAndStoreOtp = async (
     const redisKey = `otp:${userId}:${phone}`;
     await redis.setEx(redisKey, expiresIn, hash);
 
-    // Increment monthly usage
-    await User.findByIdAndUpdate(userId, { $inc: { usageCount: 1 } });
+    // Increment and/or reset usage
+    const update: any = {
+        $inc: { usageCount: 1, dailyOtpCount: isNewDay ? 0 : 1 }
+    };
+    if (isNewDay) {
+        update.lastDailyResetAt = now;
+        update.dailyOtpCount = 1;
+        update.dailyMessageCount = 0; // Reset messages too for consistency
+    }
+
+    await User.findByIdAndUpdate(userId, update);
 
     // Create pending log
     await OtpLog.create({

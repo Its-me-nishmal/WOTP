@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Key, Smartphone, FileText,
-  Settings, LogOut, Zap, Book, Terminal,
+  Settings, LogOut, Zap, Book, Terminal, MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -13,6 +13,7 @@ const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/api-keys', icon: Key, label: 'API Keys' },
   { to: '/whatsapp', icon: Smartphone, label: 'WhatsApp' },
+  { to: '/messaging', icon: MessageSquare, label: 'Direct Messaging' },
   { to: '/playground', icon: Terminal, label: 'API Playground' },
   { to: '/logs', icon: FileText, label: 'Logs' },
   { to: '/docs', icon: Book, label: 'Documentation' },
