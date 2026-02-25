@@ -32,7 +32,7 @@ export const apiKeysApi = {
 };
 
 export const whatsappApi = {
-    connect: (sessionId: string = 'default') => unwrap(api.post<{ qrCode?: string; message?: string }>('/whatsapp/connect', null, { params: { sessionId } })),
+    connect: (sessionId: string = 'default') => unwrap(api.post<{ qrCode?: string; message?: string }>('/whatsapp/connect', {}, { params: { sessionId } })),
     disconnect: (sessionId: string = 'default') => unwrap(api.delete('/whatsapp/disconnect', { params: { sessionId } })),
     getStatus: () => unwrap(api.get<{ connections: WhatsAppNumber[] }>('/whatsapp/status')),
 };
