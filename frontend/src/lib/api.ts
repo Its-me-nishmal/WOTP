@@ -8,10 +8,10 @@ const api = axios.create({
     },
 })
 
-// Attach JWT token to every request
+// Attach JWT token to every request if not already present (e.g. for API keys)
 api.interceptors.request.use((config) => {
     const token = useAuthStore.getState().token
-    if (token) {
+    if (token && !config.headers.Authorization) {
         config.headers.Authorization = `Bearer ${token}`
     }
     return config
