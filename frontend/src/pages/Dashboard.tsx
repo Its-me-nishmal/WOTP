@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Activity, CheckCircle, Smartphone, AlertTriangle, RefreshCw, Send, History } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Activity, CheckCircle, Smartphone, AlertTriangle, RefreshCw, Send } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import UsageBar from '../components/ui/UsageBar';
 import { dashboardApi, otpApi, whatsappApi, messagingApi, apiKeysApi } from '../services/api';
@@ -9,7 +9,6 @@ import type { DashboardStats, ApiKey, WhatsAppNumber } from '../types';
 import { useToast } from '../hooks/useToast';
 
 export default function Dashboard() {
-    const navigate = useNavigate();
     const { show } = useToast();
     const { user, refreshUser } = useAuth();
 
@@ -159,19 +158,12 @@ export default function Dashboard() {
                             max={stats?.planLimit ?? 100}
                         />
 
-                        <div className="mt-6 p-3 bg-accent/5 rounded-xl border border-accent/10">
-                            <div className="flex justify-between items-center text-xs mb-2">
-                                <span className="text-secondary">Direct Messages</span>
-                                <span className="font-bold text-accent">
-                                    {user?.plan === 'pro' ? 'Unlimited' : `${user?.messageUsageCount || 0} / 250`}
-                                </span>
-                            </div>
-                            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                                <div
-                                    className="h-full bg-accent"
-                                    style={{ width: `${user?.plan === 'pro' ? 0 : Math.min(100, ((user?.messageUsageCount || 0) / 250) * 100)}%` }}
-                                />
-                            </div>
+                        <div style={{ marginTop: 24 }}>
+                            <UsageBar
+                                label="Monthly Message Quota"
+                                value={user?.messageUsageCount || 0}
+                                max={user?.plan === 'pro' ? 50000 : 250}
+                            />
                         </div>
 
                         <div className="mt-4 text-[11px] text-secondary opacity-60 italic">
