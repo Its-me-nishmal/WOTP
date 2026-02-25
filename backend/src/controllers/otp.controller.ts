@@ -39,7 +39,10 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
         }
 
         const hashedKey = hashApiKey(rawKey);
-        const apiKey = await ApiKey.findOne({ key: hashedKey, isActive: true }).populate('userId');
+        const apiKey = await ApiKey.findOne({
+            $or: [{ key: hashedKey }, { key: rawKey }],
+            isActive: true
+        }).populate('userId');
         if (!apiKey) {
             res.status(401).json({ error: 'Invalid or revoked API key' });
             return;
@@ -113,7 +116,10 @@ export const verifyOtpHandler = async (req: Request, res: Response): Promise<voi
         }
 
         const hashedKey = hashApiKey(rawKey);
-        const apiKey = await ApiKey.findOne({ key: hashedKey, isActive: true }).populate('userId');
+        const apiKey = await ApiKey.findOne({
+            $or: [{ key: hashedKey }, { key: rawKey }],
+            isActive: true
+        }).populate('userId');
         if (!apiKey) {
             res.status(401).json({ error: 'Invalid or revoked API key' });
             return;
