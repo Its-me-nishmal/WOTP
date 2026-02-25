@@ -11,6 +11,7 @@ interface OtpJobData {
     phone: string;
     otp: string;
     apiKeyId: string;
+    sessionId?: string;
     message?: string;
 }
 
@@ -42,20 +43,20 @@ export const startOtpWorker = () => {
     const worker = new Worker<OtpJobData>(
         'otp',
         async (job: Job<OtpJobData>) => {
-            const { userId, phone, otp, apiKeyId, message: customMessage } = job.data;
-            logger.info(`Worker processing OTP job for ${phone}`, { jobId: job.id });
+            const { userId, phone, otp, apiKeyId, message: customMessage, sessionId = 'default' } = job.data;
+            logger.info(`Worker processing OTP job for ${phone} via ${sessionId}`, { jobId: job.id });
 
             try {
                 // Auto-restore session if it dropped but creds exist
-                const wsStatus = whatsappService.getStatus(userId);
+                const wsStatus = whatsappService.getStatus(userId, sessionId);
                 if (wsStatus === 'disconnected') {
-                    logger.info(`WhatsApp session for ${userId} is missing, attempting to restore...`);
-                    await whatsappService.connect(userId);
+                    logger.info(`WhatsApp session ${sessionId} for ${userId} is missing, attempting to restore...`);
+                    await whatsappService.connect(userId, sessionId);
 
                     // Wait up to 8 seconds for Baileys to initialize
                     for (let i = 0; i < 8; i++) {
                         await new Promise(resolve => setTimeout(resolve, 1000));
-                        if (whatsappService.getStatus(userId) === 'connected') break;
+                        if (whatsappService.getStatus(userId, sessionId) === 'connected') break;
                     }
                 }
 
@@ -65,10 +66,10 @@ export const startOtpWorker = () => {
                     message = customMessage.replace(/{{otp}}/g, otp);
                 }
 
-                const sent = await whatsappService.sendMessage(userId, phone, message);
+                const sent = await whatsappService.sendMessage(userId, phone, message, sessionId);
 
                 const status = sent ? 'delivered' : 'failed';
-                const failReason = sent ? undefined : 'WhatsApp session not connected';
+                const failReason = sent ? undefined : `WhatsApp session ${sessionId} not connected`;
 
                 if (!sent) {
                     logger.warn(`OTP sending failed for ${phone}: ${failReason}`);

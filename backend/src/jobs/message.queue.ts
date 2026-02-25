@@ -10,6 +10,7 @@ interface MessageJobData {
     phone: string;
     content: string;
     apiKeyId: string;
+    sessionId?: string;
 }
 
 let _queue: Queue<MessageJobData>;
@@ -40,24 +41,24 @@ export const startMessageWorker = () => {
     const worker = new Worker<MessageJobData>(
         'message',
         async (job: Job<MessageJobData>) => {
-            const { userId, phone, content, apiKeyId } = job.data;
-            logger.info(`Worker processing Transactional message job for ${phone}`, { jobId: job.id });
+            const { userId, phone, content, apiKeyId, sessionId = 'default' } = job.data;
+            logger.info(`Worker processing Transactional message job for ${phone} via ${sessionId}`, { jobId: job.id });
 
             try {
                 // Auto-restore session if dropped
-                const wsStatus = whatsappService.getStatus(userId);
+                const wsStatus = whatsappService.getStatus(userId, sessionId);
                 if (wsStatus === 'disconnected') {
-                    logger.info(`WhatsApp session for ${userId} missing, attempting restore...`);
-                    await whatsappService.connect(userId).catch(() => { });
+                    logger.info(`WhatsApp session ${sessionId} for ${userId} missing, attempting restore...`);
+                    await whatsappService.connect(userId, sessionId).catch(() => { });
 
                     // Wait up to 5 seconds
                     for (let i = 0; i < 5; i++) {
                         await new Promise(resolve => setTimeout(resolve, 1000));
-                        if (whatsappService.getStatus(userId) === 'connected') break;
+                        if (whatsappService.getStatus(userId, sessionId) === 'connected') break;
                     }
                 }
 
-                const sent = await whatsappService.sendMessage(userId, phone, content);
+                const sent = await whatsappService.sendMessage(userId, phone, content, sessionId);
 
                 const status = sent ? 'delivered' : 'failed';
                 const failReason = sent ? undefined : 'WhatsApp session not connected';

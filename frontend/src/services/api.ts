@@ -88,9 +88,9 @@ export const otpApi = {
         unwrap(api.post<{ success: boolean; message: string }>('/otp/test-verify', { phone, otp })),
 };
 export const messagingApi = {
-    send: (params: { phone: string; content: string; apiKey: string }) =>
+    send: (params: { phone: string; content: string; apiKey: string; sessionId?: string }) =>
         unwrap(api.post('/message/send',
-            { phone: params.phone, content: params.content },
+            { phone: params.phone, content: params.content, sessionId: params.sessionId },
             { headers: { Authorization: `Bearer ${params.apiKey}` } }
         )),
 };

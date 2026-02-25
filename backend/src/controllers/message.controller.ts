@@ -13,6 +13,7 @@ import mongoose from 'mongoose';
 const sendMessageSchema = z.object({
     phone: z.string().regex(/^\+?[1-9]\d{6,14}$/, 'Invalid phone number'),
     content: z.string().min(1).max(2048),
+    sessionId: z.string().optional(),
 });
 
 /**
@@ -21,7 +22,7 @@ const sendMessageSchema = z.object({
  */
 export const sendTransactionalMessage = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { phone, content } = sendMessageSchema.parse(req.body);
+        const { phone, content, sessionId = 'default' } = sendMessageSchema.parse(req.body);
 
         // Resolve API Key
         const rawKey = req.headers.authorization?.split(' ')[1];
@@ -39,10 +40,10 @@ export const sendTransactionalMessage = async (req: Request, res: Response): Pro
 
         const user = apiKey.userId as unknown as IUser;
 
-        // Check WhatsApp Status
-        const wsStatus = whatsappService.getStatus(String(user._id));
+        // Check WhatsApp Status for specific session
+        const wsStatus = whatsappService.getStatus(String(user._id), sessionId);
         if (wsStatus === 'disconnected') {
-            res.status(400).json({ error: 'WhatsApp is not connected.' });
+            res.status(400).json({ error: `WhatsApp session (${sessionId}) is not connected.` });
             return;
         }
 
@@ -92,6 +93,7 @@ export const sendTransactionalMessage = async (req: Request, res: Response): Pro
             phone,
             content,
             apiKeyId: String(apiKey._id),
+            sessionId,
         });
 
         // Update API key last used
