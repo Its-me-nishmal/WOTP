@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import mongoose from 'mongoose';
 import { createApp } from './app';
 import { connectDB } from './config/db';
 import { connectRedis } from './config/redis';
@@ -19,7 +20,25 @@ const bootstrap = async () => {
         // 2. Connect to Redis
         await connectRedis();
 
-        // 3. Start BullMQ OTP & Message workers
+        // 3. Migration: Drop legacy session index if it exists
+        try {
+            const db = mongoose.connection.db;
+            if (db) {
+                const collections = await db.listCollections({ name: 'sessions' }).toArray();
+                if (collections.length > 0) {
+                    const indexes = await db.collection('sessions').indexes();
+                    if (indexes.find(index => index.name === 'userId_1_dataType_1_dataId_1')) {
+                        logger.info('Dropping legacy session index...');
+                        await db.collection('sessions').dropIndex('userId_1_dataType_1_dataId_1');
+                        logger.info('Legacy index dropped successfully');
+                    }
+                }
+            }
+        } catch (err) {
+            logger.warn('Failed to drop legacy index (it might not exist or already be dropped)', err);
+        }
+
+        // 4. Start BullMQ OTP & Message workers
         startOtpWorker();
         startMessageWorker();
         logger.info('Workers started');
