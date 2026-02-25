@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, CheckCircle, Smartphone, AlertTriangle, RefreshCw, Send } from 'lucide-react';
+import { Activity, CheckCircle, AlertTriangle, RefreshCw, Send, Smartphone } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import UsageBar from '../components/ui/UsageBar';
@@ -7,6 +7,7 @@ import { dashboardApi, otpApi, whatsappApi, messagingApi, apiKeysApi } from '../
 import { useAuth } from '../context/AuthContext';
 import type { DashboardStats, ApiKey, WhatsAppNumber } from '../types';
 import { useToast } from '../hooks/useToast';
+import PhoneInput from '../components/ui/PhoneInput';
 
 export default function Dashboard() {
     const { show } = useToast();
@@ -18,11 +19,13 @@ export default function Dashboard() {
 
     // Test Console State (OTP)
     const [phone, setPhone] = useState('');
+    const [countryCode, setCountryCode] = useState('91');
     const [otp, setOtp] = useState('');
     const [mode, setMode] = useState<'send' | 'verify'>('send');
     const [sending, setSending] = useState(false);
 
     // Quick Message State
+    const [msgCountryCode, setMsgCountryCode] = useState('91');
     const [msgPhone, setMsgPhone] = useState('');
     const [msgContent, setMsgContent] = useState('');
     const [msgApiKey, setMsgApiKey] = useState('');
@@ -58,9 +61,10 @@ export default function Dashboard() {
     };
 
     const handleSendOtp = async () => {
+        const fullPhone = `+${countryCode}${phone}`;
         try {
             setSending(true);
-            await otpApi.sendTest({ phone });
+            await otpApi.sendTest({ phone: fullPhone });
             setMode('verify');
             show('OTP Sent via WhatsApp!', 'success');
             loadData();
@@ -98,9 +102,10 @@ export default function Dashboard() {
         if (!msgPhone || !msgContent || !msgApiKey || !msgSessionId) return show('Please fill all fields', 'error');
 
         setSendingMsg(true);
+        const fullPhone = `+${msgCountryCode}${msgPhone}`;
         try {
             await messagingApi.send({
-                phone: msgPhone,
+                phone: fullPhone,
                 content: msgContent,
                 apiKey: msgApiKey,
                 sessionId: msgSessionId
@@ -221,12 +226,12 @@ export default function Dashboard() {
 
                             <div className="form-group">
                                 <label className="text-[10px] font-medium text-secondary mb-1 block">Recipient Number</label>
-                                <input
-                                    className="w-full bg-surface/50 border border-white/10 rounded-lg p-2 text-xs focus:outline-none focus:border-accent"
-                                    placeholder="+919876543210"
-                                    value={msgPhone}
-                                    onChange={e => setMsgPhone(e.target.value)}
-                                    required
+                                <PhoneInput
+                                    countryCode={msgCountryCode}
+                                    phoneNumber={msgPhone}
+                                    onCountryCodeChange={setMsgCountryCode}
+                                    onPhoneNumberChange={setMsgPhone}
+                                    disabled={sendingMsg}
                                 />
                             </div>
 
@@ -266,11 +271,11 @@ export default function Dashboard() {
                         <div className="flex-1 w-full max-w-md">
                             <div className="form-group">
                                 <label className="form-label">Phone Number</label>
-                                <input
-                                    className="form-input"
-                                    placeholder="e.g. 919876543210"
-                                    value={phone}
-                                    onChange={e => setPhone(e.target.value)}
+                                <PhoneInput
+                                    countryCode={countryCode}
+                                    phoneNumber={phone}
+                                    onCountryCodeChange={setCountryCode}
+                                    onPhoneNumberChange={setPhone}
                                     disabled={mode === 'verify'}
                                 />
                             </div>

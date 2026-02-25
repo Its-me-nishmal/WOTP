@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Send, Smartphone, History, Loader2, RefreshCw } from 'lucide-react';
+import { Send, History, Loader2, RefreshCw } from 'lucide-react';
 import AppLayout from '../components/layout/AppLayout';
 import { useAuth } from '../context/AuthContext';
 import { messagingApi, messageLogsApi, apiKeysApi, whatsappApi } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import type { ApiKey, WhatsAppNumber } from '../types';
 import PremiumUpgradeModal from '../components/modals/PremiumUpgradeModal';
+import PhoneInput from '../components/ui/PhoneInput';
 
 export default function Messaging() {
     const { user, refreshUser } = useAuth();
     const { show } = useToast();
+    const [countryCode, setCountryCode] = useState('91');
     const [phone, setPhone] = useState('');
     const [content, setContent] = useState('');
     const [apiKey, setApiKey] = useState('');
@@ -42,11 +44,12 @@ export default function Messaging() {
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
+        const fullPhone = `+${countryCode}${phone}`;
         if (!phone || !content || !apiKey || !sessionId) return show('Please fill all fields', 'error');
 
         setSending(true);
         try {
-            await messagingApi.send({ phone, content, apiKey, sessionId });
+            await messagingApi.send({ phone: fullPhone, content, apiKey, sessionId });
             show('Message queued successfully', 'success');
             setContent('');
             refreshUser();
@@ -110,20 +113,13 @@ export default function Messaging() {
 
                                 <div className="form-group">
                                     <label className="text-xs font-medium text-secondary mb-1.5 block">Recipient Phone Number</label>
-                                    <div className="relative">
-                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-secondary">
-                                            <Smartphone size={16} />
-                                        </div>
-                                        <input
-                                            type="text"
-                                            className="w-full bg-surface/50 border border-white/10 rounded-xl p-3 pl-10 text-sm focus:outline-none focus:border-accent transition-colors"
-                                            value={phone}
-                                            onChange={e => setPhone(e.target.value)}
-                                            placeholder="+919876543210"
-                                            required
-                                        />
-                                    </div>
-                                    <p className="text-[10px] text-secondary mt-1 ml-1 opacity-70">Include country code (e.g. +91)</p>
+                                    <PhoneInput
+                                        countryCode={countryCode}
+                                        phoneNumber={phone}
+                                        onCountryCodeChange={setCountryCode}
+                                        onPhoneNumberChange={setPhone}
+                                        disabled={sending}
+                                    />
                                 </div>
 
                                 <div className="form-group">

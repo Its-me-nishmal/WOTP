@@ -7,6 +7,19 @@ export default {
     theme: {
         extend: {
             colors: {
+                base: '#0a0b0f',
+                surface: '#10121a',
+                card: '#13161f',
+                'card-hover': '#181d2a',
+                border: '#1e2436',
+                accent: '#25d366',
+                'accent-dim': '#1a9e4c',
+                'accent-glow': 'rgba(37, 211, 102, 0.18)',
+                text: {
+                    primary: '#f0f2f8',
+                    secondary: '#8b92a9',
+                    muted: '#4a5170',
+                },
                 brand: {
                     50: '#f0fdf4',
                     100: '#dcfce7',

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { apiKeysApi, otpApi, whatsappApi } from '../../services/api';
 import type { ApiKey } from '../../types';
 import { useToast } from '../../hooks/useToast';
+import PhoneInput from '../ui/PhoneInput';
 
 interface Props {
     onSuccess: () => void;
@@ -20,6 +21,7 @@ export default function AdvancedTestConsole({ onSuccess }: Props) {
     const [sending, setSending] = useState(false);
 
     // Form State
+    const [countryCode, setCountryCode] = useState('91');
     const [phone, setPhone] = useState('');
     const [otp, setOtp] = useState('');
     const [selectedKeyId, setSelectedKeyId] = useState('');
@@ -41,7 +43,8 @@ export default function AdvancedTestConsole({ onSuccess }: Props) {
                 whatsappApi.getStatus()
             ]);
             setKeys(keysRes);
-            setWsStatus(wsRes.status);
+            const isAllConnected = wsRes.connections.some(c => c.status === 'connected');
+            setWsStatus(isAllConnected ? 'connected' : 'disconnected');
             if (keysRes.length > 0) setSelectedKeyId(keysRes[0].id);
         } catch (err) {
             show('Failed to load session status', 'error');
@@ -51,11 +54,12 @@ export default function AdvancedTestConsole({ onSuccess }: Props) {
     };
 
     const handleSend = async () => {
+        const fullPhone = `+${countryCode}${phone}`;
         if (!phone) return show('Phone number required', 'error');
         setSending(true);
         try {
             await otpApi.sendTest({
-                phone,
+                phone: fullPhone,
                 apiKeyId: selectedKeyId,
                 length,
                 type,
@@ -73,10 +77,11 @@ export default function AdvancedTestConsole({ onSuccess }: Props) {
     };
 
     const handleVerify = async () => {
+        const fullPhone = `+${countryCode}${phone}`;
         if (!otp) return show('Enter the OTP', 'error');
         setSending(true);
         try {
-            const res = await otpApi.verifyTest(phone, otp);
+            const res = await otpApi.verifyTest(fullPhone, otp);
             if (res.success) {
                 show('Verification Successful!', 'success');
                 setMode('send');
@@ -137,11 +142,11 @@ export default function AdvancedTestConsole({ onSuccess }: Props) {
                             <label className="form-label flex items-center gap-2">
                                 <Smartphone size={14} /> Recovery Phone
                             </label>
-                            <input
-                                className="form-input"
-                                placeholder="e.g. 919876543210"
-                                value={phone}
-                                onChange={e => setPhone(e.target.value)}
+                            <PhoneInput
+                                countryCode={countryCode}
+                                phoneNumber={phone}
+                                onCountryCodeChange={setCountryCode}
+                                onPhoneNumberChange={setPhone}
                                 disabled={mode === 'verify'}
                             />
                         </div>
