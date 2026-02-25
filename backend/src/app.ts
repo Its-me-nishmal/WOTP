@@ -5,7 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { logger } from './utils/logger';
 
 import authRoutes from './routes/auth.routes';
-import userRoutes from './routes/user.routes';
+import userRoutes, { userApiRouter } from './routes/user.routes';
 import apikeyRoutes from './routes/apikey.routes';
 import otpRoutes from './routes/otp.routes';
 import whatsappRoutes from './routes/whatsapp.routes';
@@ -64,6 +64,9 @@ export const createApp = () => {
     apiRouter.use('/message', messageRoutes);
 
     app.use('/api', apiRouter);
+
+    // ── SDK API Key Routes ───────────────────────────────────────────────────────
+    app.use('/api/user', userApiRouter);
 
     // ── 404 Handler ─────────────────────────────────────────────────────────────
     app.use((_req, res) => {
