@@ -135,7 +135,7 @@ class ClientManager {
                     await deleteSession(userId, sessionId);
                     this.reconnectAttempts.delete(key);
 
-                    await WhatsAppConnection.findOneAndUpdate({ userId, sessionId }, { status: 'disconnected' });
+                    await WhatsAppConnection.deleteOne({ userId, sessionId });
 
                     if (sessionId === 'default') {
                         await User.findByIdAndUpdate(userId, { whatsappStatus: 'disconnected' });
@@ -168,7 +168,8 @@ class ClientManager {
 
         await deleteSession(userId, sessionId);
 
-        await WhatsAppConnection.findOneAndUpdate({ userId, sessionId }, { status: 'disconnected' });
+        // Full cleanup: delete the connection record
+        await WhatsAppConnection.deleteOne({ userId, sessionId });
 
         if (sessionId === 'default') {
             await User.findByIdAndUpdate(userId, { whatsappStatus: 'disconnected' });
