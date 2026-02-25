@@ -8,7 +8,7 @@ import type { ApiKey, WhatsAppNumber } from '../types';
 import PremiumUpgradeModal from '../components/modals/PremiumUpgradeModal';
 
 export default function Messaging() {
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
     const { show } = useToast();
     const [phone, setPhone] = useState('');
     const [content, setContent] = useState('');
@@ -49,6 +49,7 @@ export default function Messaging() {
             await messagingApi.send({ phone, content, apiKey, sessionId });
             show('Message queued successfully', 'success');
             setContent('');
+            refreshUser();
             setTimeout(fetchLogs, 2000);
         } catch (err: any) {
             show(err.response?.data?.error || err.message, 'error');
@@ -202,8 +203,8 @@ export default function Messaging() {
                                             <div className="flex justify-between items-start mb-1">
                                                 <span className="font-mono text-xs font-semibold text-primary">{log.phone}</span>
                                                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${log.status === 'delivered' ? 'bg-green-500/10 text-green-500' :
-                                                        log.status === 'failed' ? 'bg-red-500/10 text-red-500' :
-                                                            'bg-orange-500/10 text-orange-500'
+                                                    log.status === 'failed' ? 'bg-red-500/10 text-red-500' :
+                                                        'bg-orange-500/10 text-orange-500'
                                                     }`}>
                                                     {log.status.toUpperCase()}
                                                 </span>

@@ -1,28 +1,41 @@
 import { useEffect, useState } from 'react';
-import { Activity, CheckCircle, Smartphone, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Activity, CheckCircle, Smartphone, AlertTriangle, RefreshCw, Send, History } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import UsageBar from '../components/ui/UsageBar';
-import { dashboardApi, otpApi, whatsappApi } from '../services/api';
-import type { DashboardStats } from '../types';
+import { dashboardApi, otpApi, whatsappApi, messagingApi, apiKeysApi } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import type { DashboardStats, ApiKey, WhatsAppNumber } from '../types';
 import { useToast } from '../hooks/useToast';
 
 export default function Dashboard() {
     const navigate = useNavigate();
     const { show } = useToast();
-    const [stats, setStats] = useState<DashboardStats | null>(null);
-    const [wsStatus, setWsStatus] = useState<'connected' | 'disconnected' | 'connecting'>('disconnected');
-    const [loading, setLoading] = useState(true);
-    const isWhatsAppConnected = wsStatus === 'connected';
+    const { user, refreshUser } = useAuth();
 
-    // Simple Test Console State
+    const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [connections, setConnections] = useState<WhatsAppNumber[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    // Test Console State (OTP)
     const [phone, setPhone] = useState('');
     const [otp, setOtp] = useState('');
     const [mode, setMode] = useState<'send' | 'verify'>('send');
     const [sending, setSending] = useState(false);
 
+    // Quick Message State
+    const [msgPhone, setMsgPhone] = useState('');
+    const [msgContent, setMsgContent] = useState('');
+    const [msgApiKey, setMsgApiKey] = useState('');
+    const [msgSessionId, setMsgSessionId] = useState('default');
+    const [keys, setKeys] = useState<ApiKey[]>([]);
+    const [sendingMsg, setSendingMsg] = useState(false);
+
+    const isWhatsAppConnected = connections.some(c => c.status === 'connected');
+
     useEffect(() => {
         loadData();
+        apiKeysApi.list().then(setKeys);
     }, []);
 
     const loadData = async () => {
@@ -33,7 +46,11 @@ export default function Dashboard() {
                 whatsappApi.getStatus()
             ]);
             setStats(statsRes);
-            setWsStatus(wsRes.status);
+            const active = wsRes.connections.filter(c => c.status === 'connected');
+            setConnections(active);
+            if (active.length > 0 && !active.find(c => c.sessionId === 'default')) {
+                setMsgSessionId(active[0].sessionId);
+            }
         } catch (err) {
             show('Failed to load dashboard data', 'error');
         } finally {
@@ -41,13 +58,14 @@ export default function Dashboard() {
         }
     };
 
-    const handleSend = async () => {
+    const handleSendOtp = async () => {
         try {
             setSending(true);
             await otpApi.sendTest({ phone });
             setMode('verify');
             show('OTP Sent via WhatsApp!', 'success');
-            loadData(); // Refresh stats immediately
+            loadData();
+            refreshUser();
         } catch (err: any) {
             show(err.response?.data?.error || err.message, 'error');
         } finally {
@@ -55,7 +73,7 @@ export default function Dashboard() {
         }
     };
 
-    const handleVerify = async () => {
+    const handleVerifyOtp = async () => {
         try {
             setSending(true);
             const res = await otpApi.verifyTest(phone, otp);
@@ -64,7 +82,8 @@ export default function Dashboard() {
                 setMode('send');
                 setOtp('');
                 setPhone('');
-                loadData(); // refresh stats
+                loadData();
+                refreshUser();
             } else {
                 show(res.message || 'Invalid OTP', 'error');
             }
@@ -75,7 +94,31 @@ export default function Dashboard() {
         }
     };
 
-    if (loading) return <AppLayout title="Dashboard">Loading...</AppLayout>;
+    const handleSendMessage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!msgPhone || !msgContent || !msgApiKey || !msgSessionId) return show('Please fill all fields', 'error');
+
+        setSendingMsg(true);
+        try {
+            await messagingApi.send({
+                phone: msgPhone,
+                content: msgContent,
+                apiKey: msgApiKey,
+                sessionId: msgSessionId
+            });
+            show('Message queued successfully', 'success');
+            setMsgContent('');
+            setMsgPhone('');
+            loadData();
+            refreshUser();
+        } catch (err: any) {
+            show(err.response?.data?.error || err.message, 'error');
+        } finally {
+            setSendingMsg(false);
+        }
+    };
+
+    if (loading && !stats) return <AppLayout title="Dashboard">Loading...</AppLayout>;
 
     return (
         <AppLayout title="Dashboard">
@@ -103,11 +146,11 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            <div className="flex gap-6" style={{ flexWrap: 'wrap' }}>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Usage Card */}
-                <div className="card" style={{ flex: 1, minWidth: 300 }}>
+                <div className="card h-fit">
                     <div className="card-header">
-                        <h3 className="font-semibold">Current Plan Usage</h3>
+                        <h3 className="font-semibold">Plan Usage</h3>
                     </div>
                     <div className="card-body">
                         <UsageBar
@@ -115,94 +158,186 @@ export default function Dashboard() {
                             value={stats ? (stats.planLimit - stats.remainingOtps) : 0}
                             max={stats?.planLimit ?? 100}
                         />
-                        <div style={{ marginTop: 20, fontSize: 13, color: 'var(--text-secondary)' }}>
+
+                        <div className="mt-6 p-3 bg-accent/5 rounded-xl border border-accent/10">
+                            <div className="flex justify-between items-center text-xs mb-2">
+                                <span className="text-secondary">Direct Messages</span>
+                                <span className="font-bold text-accent">
+                                    {user?.plan === 'pro' ? 'Unlimited' : `${user?.messageUsageCount || 0} / 250`}
+                                </span>
+                            </div>
+                            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-accent"
+                                    style={{ width: `${user?.plan === 'pro' ? 0 : Math.min(100, ((user?.messageUsageCount || 0) / 250) * 100)}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-4 text-[11px] text-secondary opacity-60 italic">
                             Plan resets on <strong>1st of every month</strong>.
                         </div>
-                        <Link to="/settings" className="btn btn-secondary w-full no-underline flex items-center justify-center" style={{ marginTop: 24 }}>
+                        <Link to="/settings" className="btn btn-secondary w-full no-underline flex items-center justify-center mt-6">
                             Upgrade Plan
                         </Link>
                     </div>
                 </div>
 
-                {/* Test Console */}
-                <div className="card" style={{ flex: 1, minWidth: 300 }}>
-                    <div className="card-header">
-                        <h3 className="font-semibold">Quick Test</h3>
-                        <span className="badge badge-gray">Sandbox</span>
+                {/* Quick Message Card */}
+                <div className="card lg:col-span-2">
+                    <div className="card-header border-b border-white/5 flex justify-between items-center">
+                        <h3 className="flex items-center gap-2 font-semibold">
+                            <Send size={18} className="text-accent" />
+                            Quick Direct Message
+                        </h3>
+                        <Link to="/messaging" className="text-xs text-accent hover:underline no-underline">View History →</Link>
                     </div>
-                    <div className="card-body text-center">
-                        <div className="form-group text-left">
-                            <label className="form-label">Phone Number</label>
-                            <input
-                                className="form-input"
-                                placeholder="e.g. 919876543210"
-                                value={phone}
-                                onChange={e => setPhone(e.target.value)}
-                                disabled={mode === 'verify'}
-                            />
-                        </div>
+                    <div className="card-body py-4">
+                        <form onSubmit={handleSendMessage} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="form-group">
+                                    <label className="text-[10px] font-medium text-secondary mb-1 block">Sender WhatsApp</label>
+                                    <select
+                                        value={msgSessionId}
+                                        onChange={e => setMsgSessionId(e.target.value)}
+                                        className="w-full bg-surface/50 border border-white/10 rounded-lg p-2 text-xs focus:outline-none focus:border-accent"
+                                        required
+                                    >
+                                        <option value="">Select account</option>
+                                        {connections.map(c => (
+                                            <option key={c.sessionId} value={c.sessionId}>
+                                                {c.name || c.sessionId} ({c.phone || 'No number'})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label className="text-[10px] font-medium text-secondary mb-1 block">API Key</label>
+                                    <select
+                                        value={msgApiKey}
+                                        onChange={e => setMsgApiKey(e.target.value)}
+                                        className="w-full bg-surface/50 border border-white/10 rounded-lg p-2 text-xs focus:outline-none focus:border-accent"
+                                        required
+                                    >
+                                        <option value="">Select key</option>
+                                        {keys.map(k => (
+                                            <option key={k.id} value={k.key}>{k.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
 
-                        {mode === 'verify' && (
-                            <div className="form-group text-left animate-in">
-                                <label className="form-label">Enter OTP</label>
+                            <div className="form-group">
+                                <label className="text-[10px] font-medium text-secondary mb-1 block">Recipient Number</label>
                                 <input
-                                    className="form-input"
-                                    placeholder="------"
-                                    value={otp}
-                                    onChange={e => setOtp(e.target.value)}
-                                    autoFocus
+                                    className="w-full bg-surface/50 border border-white/10 rounded-lg p-2 text-xs focus:outline-none focus:border-accent"
+                                    placeholder="+919876543210"
+                                    value={msgPhone}
+                                    onChange={e => setMsgPhone(e.target.value)}
+                                    required
                                 />
                             </div>
-                        )}
 
-                        <div style={{ marginTop: 20 }}>
-                            {mode === 'send' ? (
-                                <button
-                                    className={`btn w-full ${(!isWhatsAppConnected || (stats?.activeKeys ?? 0) === 0) ? 'btn-secondary' : 'btn-primary'}`}
-                                    onClick={() => {
-                                        if (!isWhatsAppConnected) return navigate('/whatsapp');
-                                        if ((stats?.activeKeys ?? 0) === 0) return navigate('/api-keys');
-                                        handleSend();
-                                    }}
-                                    disabled={sending || (isWhatsAppConnected && (stats?.activeKeys ?? 0) > 0 && !phone)}
-                                >
-                                    {sending ? <RefreshCw className="spinner mr-2" size={16} /> : null}
-                                    {!isWhatsAppConnected
-                                        ? 'Please Connect WhatsApp'
-                                        : (stats?.activeKeys ?? 0) === 0
-                                            ? 'Please Create API Key'
-                                            : 'Send Test OTP'
-                                    }
-                                </button>
-                            ) : (
-                                <button
-                                    className="btn btn-primary w-full"
-                                    onClick={handleVerify}
-                                    disabled={sending || !otp}
-                                >
-                                    {sending ? <RefreshCw className="spinner mr-2" size={16} /> : null}
-                                    Verify OTP
-                                </button>
-                            )}
-                        </div>
+                            <div className="form-group">
+                                <label className="text-[10px] font-medium text-secondary mb-1 block">Message</label>
+                                <textarea
+                                    className="w-full bg-surface/50 border border-white/10 rounded-lg p-3 text-xs focus:outline-none focus:border-accent resize-none"
+                                    rows={3}
+                                    placeholder="Your message here..."
+                                    value={msgContent}
+                                    onChange={e => setMsgContent(e.target.value)}
+                                    required
+                                />
+                            </div>
 
-                        <div className="mt-6 pt-4 border-t border-[var(--border)]">
-                            <Link
-                                to="/playground"
-                                className="text-xs text-accent hover:underline no-underline font-medium"
-                            >
-                                Open Advanced Playground →
-                            </Link>
-                        </div>
-
-                        {mode === 'verify' && (
                             <button
-                                className="text-xs text-secondary w-full mt-4 underline text-center cursor-pointer bg-transparent border-0"
-                                onClick={() => setMode('send')}
+                                type="submit"
+                                className="btn btn-primary w-full py-2.5 rounded-lg flex items-center justify-center gap-2 text-sm"
+                                disabled={sendingMsg || !isWhatsAppConnected}
                             >
-                                Reset / Send New
+                                {sendingMsg ? <RefreshCw className="animate-spin" size={16} /> : <Send size={16} />}
+                                {isWhatsAppConnected ? 'Send Message' : 'Connect WhatsApp First'}
                             </button>
-                        )}
+                        </form>
+                    </div>
+                </div>
+
+                {/* OTP Test Console (Moved to its own row or below) */}
+                <div className="card lg:col-span-3">
+                    <div className="card-header border-b border-white/5">
+                        <h3 className="flex items-center gap-2 font-semibold">
+                            <Smartphone size={18} className="text-accent" />
+                            WhatsApp OTP Test Console
+                        </h3>
+                    </div>
+                    <div className="card-body flex flex-col md:flex-row gap-8 py-6 items-center">
+                        <div className="flex-1 w-full max-w-md">
+                            <div className="form-group">
+                                <label className="form-label">Phone Number</label>
+                                <input
+                                    className="form-input"
+                                    placeholder="e.g. 919876543210"
+                                    value={phone}
+                                    onChange={e => setPhone(e.target.value)}
+                                    disabled={mode === 'verify'}
+                                />
+                            </div>
+
+                            {mode === 'verify' && (
+                                <div className="form-group mt-4 animate-in">
+                                    <label className="form-label">Enter OTP</label>
+                                    <input
+                                        className="form-input"
+                                        placeholder="------"
+                                        value={otp}
+                                        onChange={e => setOtp(e.target.value)}
+                                        autoFocus
+                                    />
+                                </div>
+                            )}
+
+                            <div className="mt-6 flex gap-3">
+                                {mode === 'send' ? (
+                                    <button
+                                        className="btn btn-primary flex-1"
+                                        onClick={handleSendOtp}
+                                        disabled={sending || !phone || !isWhatsAppConnected}
+                                    >
+                                        {sending ? <RefreshCw className="animate-spin mr-2" size={16} /> : null}
+                                        Send Test OTP
+                                    </button>
+                                ) : (
+                                    <>
+                                        <button
+                                            className="btn btn-primary flex-1"
+                                            onClick={handleVerifyOtp}
+                                            disabled={sending || !otp}
+                                        >
+                                            {sending ? <RefreshCw className="animate-spin mr-2" size={16} /> : null}
+                                            Verify OTP
+                                        </button>
+                                        <button className="btn btn-secondary" onClick={() => setMode('send')}>Cancel</button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="hidden md:block w-px h-32 bg-white/5"></div>
+
+                        <div className="flex-1 text-center md:text-left space-y-4">
+                            <div className="flex items-center gap-3 justify-center md:justify-start">
+                                <div className={`w-3 h-3 rounded-full ${isWhatsAppConnected ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500'}`}></div>
+                                <span className="text-sm font-medium">WhatsApp Status: {isWhatsAppConnected ? 'Connected' : 'Disconnected'}</span>
+                            </div>
+                            <p className="text-xs text-secondary opacity-70 leading-relaxed">
+                                Use this console to test your WhatsApp OTP integration manually.
+                                Ensure your WhatsApp account is linked and you have at least one active API key.
+                            </p>
+                            <div className="flex gap-4 pt-2">
+                                <Link to="/whatsapp" className="text-xs text-accent hover:underline no-underline">Connect WhatsApp →</Link>
+                                <Link to="/docs" className="text-xs text-accent hover:underline no-underline">API Tutorial →</Link>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
